@@ -1,9 +1,9 @@
 App(
      # Unique identifier used by the build system (must be unique across firmware).
-    appid="mitzi_puck",
+    appid="karl_edio",
 
     # What users will see when browsing apps
-    name="Puck girl",
+    name="Karl Eido",
 
     # Description for the Flipper Application catalogue
     fap_description="An app that mimics an optical instrument to generate beautiful patterns by using 3 mirrors.",
@@ -18,9 +18,6 @@ App(
     cdefines=["APP_KARL_EIDO"],
 	
     sources=["karl-eido.c"],
-
-	fap_author="F Greil",
-    fap_weburl="https://github.com/fgreil/mitzi-karl-eido",
 
     # List of system modules this app depends on
     # "gui" ensures the graphical user interface system is available. 
