@@ -1,0 +1,47 @@
+App(
+     # Unique identifier used by the build system (must be unique across firmware).
+    appid="mitzi_puck",
+
+    # What users will see when browsing apps
+    name="Puck girl",
+
+    # Description for the Flipper Application catalogue
+    fap_description="An app that mimics an optical instrument to generate beautiful patterns by using 3 mirrors.",
+
+    # Application type - EXTERNAL means it's a .fap file loaded from SD card
+    apptype=FlipperAppType.EXTERNAL,
+    
+    # The C function that starts the app, i.a.w. the main C file must contain: int32_t puckgirl_main(void* p) { ... }
+    entry_point="karl_eido_main",
+
+    # Preprocessor definitions added during compilation
+    cdefines=["APP_KARL_EIDO"],
+	
+    sources=["puck.c"],
+
+	 fap_author="F Greil",
+    fap_weburl="https://github.com/fgreil/mitzi-karl-eido",
+
+    # List of system modules this app depends on
+    # "gui" ensures the graphical user interface system is available. 
+    # Other common choices: "storage", "notification", "dialogs"
+    requires=["gui"],
+
+    # Stack memory allocated for the app's thread (in bytes). 2KB is enough here.
+    stack_size=1 * 1024,
+
+   # Format of the menu icon: Black-and-white PNG (=1-bit color depth), 10x10 pixel
+    fap_icon="images/icon_10x10.png",
+
+    # Path to the app icon displayed in the menu
+    fap_icon_assets="images",
+	
+    # Symbol name for generated icon header (generates puck_icons.h)
+    fap_icon_assets_symbol="karl-eido",
+ 
+    # Available categories: Main, GPIO, Sub-GHz, RFID, NFC, Infrared, Misc, Games, Tools, Settings, USB
+    fap_category="Games",
+
+    # Version number
+    fap_version=(0,1,0)
+)
