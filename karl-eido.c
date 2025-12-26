@@ -28,19 +28,24 @@
 #define DASH_DOT_PATTERN_LENGTH 5
 static const uint8_t DASH_DOT_PATTERN[DASH_DOT_PATTERN_LENGTH] = {1, 0, 1, 1, 0};
 
-// Application state
-typedef struct {
-    int side_length;
-    int num_random_pixels;
-    bool show_centers;
-    bool running;
-} AppState;
+// Maximum number of random pixels to store
+#define MAX_PIXELS 200
 
 // Point structure for coordinates
 typedef struct {
     int x;
     int y;
 } Point;
+
+// Application state
+typedef struct {
+    int side_length;
+    int num_random_pixels;
+    bool show_centers;
+    bool running;
+    Point* pixel_buffer;  // Heap-allocated pixel buffer
+    int pixel_count;
+} AppState;
 
 /**
  * Calculate the height of an equilateral triangle given its side length
@@ -184,9 +189,10 @@ static bool is_triangle_visible(Point* vertices) {
 }
 
 /**
- * Generate random pixels in the base triangle and draw them mirrored across all triangles
+ * Generate random pixels in the base triangle
  */
-static void generate_and_draw_pattern(Canvas* canvas, AppState* state) {
+static void generate_random_pixels(AppState* state) {
+    if(state == NULL || state->pixel_buffer == NULL) return;
     if(state->side_length < MIN_SIDE_LENGTH) return;
     
     float h = triangle_height(state->side_length);
@@ -197,10 +203,9 @@ static void generate_and_draw_pattern(Canvas* canvas, AppState* state) {
     Point base_center = get_triangle_center(base_vertices);
     
     // Generate random pixels in base triangle
-    uint8_t pixels[MAX_SIDE_LENGTH * MAX_SIDE_LENGTH];
-    int pixel_count = 0;
+    state->pixel_count = 0;
     
-    for(int i = 0; i < state->num_random_pixels; i++) {
+    for(int i = 0; i < state->num_random_pixels && state->pixel_count < MAX_PIXELS; i++) {
         int px = base_vertices[0].x + (rand() % ((int)h + 1));
         int py = base_vertices[0].y - state->side_length / 2 + (rand() % (state->side_length + 1));
         
@@ -208,11 +213,26 @@ static void generate_and_draw_pattern(Canvas* canvas, AppState* state) {
             // Skip if pixel would be at center point
             if(px == base_center.x && py == base_center.y) continue;
             
-            pixels[pixel_count * 2] = px;
-            pixels[pixel_count * 2 + 1] = py;
-            pixel_count++;
+            state->pixel_buffer[state->pixel_count].x = px;
+            state->pixel_buffer[state->pixel_count].y = py;
+            state->pixel_count++;
         }
     }
+}
+
+/**
+ * Draw the pattern using pre-generated pixels
+ */
+static void draw_pattern(Canvas* canvas, AppState* state) {
+    if(state == NULL || canvas == NULL) return;
+    if(state->side_length < MIN_SIDE_LENGTH) return;
+    
+    float h = triangle_height(state->side_length);
+    
+    // Get base triangle for reference
+    Point base_vertices[3];
+    get_triangle_vertices(base_vertices, 0, 0, state->side_length, true);
+    Point base_center = get_triangle_center(base_vertices);
     
     // Calculate grid dimensions
     int num_cols = (int)(SCREEN_WIDTH / h) + 2;
@@ -241,9 +261,9 @@ static void generate_and_draw_pattern(Canvas* canvas, AppState* state) {
             Point curr_center = get_triangle_center(vertices);
             int area = 0;
             
-            for(int p = 0; p < pixel_count; p++) {
-                int px = pixels[p * 2];
-                int py = pixels[p * 2 + 1];
+            for(int p = 0; p < state->pixel_count; p++) {
+                int px = state->pixel_buffer[p].x;
+                int py = state->pixel_buffer[p].y;
                 
                 // Mirror pixel relative to triangle centers
                 int mirrored_x = curr_center.x + (px - base_center.x);
@@ -291,7 +311,7 @@ static void render_callback(Canvas* canvas, void* ctx) {
     canvas_clear(canvas);
     canvas_set_color(canvas, ColorBlack);
     
-    generate_and_draw_pattern(canvas, state);
+    draw_pattern(canvas, state);
 }
 
 /**
@@ -311,34 +331,44 @@ static bool handle_input(InputEvent* event, AppState* state) {
         return false;
     }
     
-    bool state_changed = true;
+    bool state_changed = false;
+    bool regenerate_pixels = false;
     
     switch(event->key) {
         case InputKeyUp:
             if(state->side_length < MAX_SIDE_LENGTH) {
                 state->side_length += SIDE_LENGTH_STEP;
+                state_changed = true;
+                regenerate_pixels = true;
             }
             break;
             
         case InputKeyDown:
             if(state->side_length > MIN_SIDE_LENGTH) {
                 state->side_length -= SIDE_LENGTH_STEP;
+                state_changed = true;
+                regenerate_pixels = true;
             }
             break;
             
         case InputKeyLeft:
             if(state->num_random_pixels > 0) {
                 state->num_random_pixels--;
+                state_changed = true;
+                regenerate_pixels = true;
             }
             break;
             
         case InputKeyRight:
             state->num_random_pixels++;
+            state_changed = true;
+            regenerate_pixels = true;
             break;
             
         case InputKeyOk:
             if(event->type == InputTypePress) {
                 state->show_centers = !state->show_centers;
+                state_changed = true;
             }
             break;
             
@@ -347,8 +377,12 @@ static bool handle_input(InputEvent* event, AppState* state) {
             break;
             
         default:
-            state_changed = false;
             break;
+    }
+    
+    // Regenerate pixels if needed
+    if(regenerate_pixels) {
+        generate_random_pixels(state);
     }
     
     return state_changed;
@@ -363,16 +397,43 @@ int32_t karl_main(void* p) {
     
     // Initialize application state
     AppState* state = malloc(sizeof(AppState));
+    if(state == NULL) {
+        return -1; // Failed to allocate memory
+    }
+    
+    // Allocate pixel buffer on heap
+    state->pixel_buffer = malloc(sizeof(Point) * MAX_PIXELS);
+    if(state->pixel_buffer == NULL) {
+        free(state);
+        return -1;
+    }
+    
     state->side_length = MIN_SIDE_LENGTH;
     state->num_random_pixels = 0;
+    state->pixel_count = 0;
     state->show_centers = false;
     state->running = true;
     
+    // Generate initial (empty) pixel set
+    generate_random_pixels(state);
+    
     // Create event queue
     FuriMessageQueue* event_queue = furi_message_queue_alloc(8, sizeof(InputEvent));
+    if(event_queue == NULL) {
+        free(state->pixel_buffer);
+        free(state);
+        return -1;
+    }
     
     // Set up viewport
     ViewPort* view_port = view_port_alloc();
+    if(view_port == NULL) {
+        furi_message_queue_free(event_queue);
+        free(state->pixel_buffer);
+        free(state);
+        return -1;
+    }
+    
     view_port_draw_callback_set(view_port, render_callback, state);
     view_port_input_callback_set(view_port, input_callback, event_queue);
     
@@ -395,6 +456,7 @@ int32_t karl_main(void* p) {
     view_port_free(view_port);
     furi_message_queue_free(event_queue);
     furi_record_close(RECORD_GUI);
+    free(state->pixel_buffer);
     free(state);
     
     return 0;
