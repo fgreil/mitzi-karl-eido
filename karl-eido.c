@@ -254,6 +254,9 @@ static void draw_pattern(Canvas* canvas, AppState* state) {
             // Skip if triangle is not visible
             if(!is_triangle_visible(vertices)) continue;
             
+            // Count this triangle
+            total_triangles++;
+            
             // Draw triangle outline
             draw_triangle_outline(canvas, vertices);
             
@@ -277,30 +280,30 @@ static void draw_pattern(Canvas* canvas, AppState* state) {
                 }
             }
             
+            total_area += area;
+            
             // Draw center point if enabled
             if(state->show_centers && 
                curr_center.x >= 0 && curr_center.x < SCREEN_WIDTH && 
                curr_center.y >= 0 && curr_center.y < SCREEN_HEIGHT) {
                 canvas_draw_disc(canvas, curr_center.x, curr_center.y, 1);
-                total_triangles++;
             }
-            
-            total_area += area;
         }
     }
     
-    // Draw debug info: "# [avg area] T: [visible centers]"
+    // Draw debug info: "# [avg area] T: [visible centers] L=[side length]"
     char debug_str[32];
     int avg_area = (total_triangles > 0) ? (total_area / total_triangles) : 0;
-    snprintf(debug_str, sizeof(debug_str), "# %d T: %d", avg_area, total_triangles);
+    int visible_centers = state->show_centers ? total_triangles : 0;
+    snprintf(debug_str, sizeof(debug_str), "# %d T: %d L=%d", avg_area, visible_centers, state->side_length);
     
     // Draw white background for text
     canvas_set_color(canvas, ColorWhite);
-    canvas_draw_box(canvas, SCREEN_WIDTH - 60, 0, 60, 10);
+    canvas_draw_box(canvas, SCREEN_WIDTH - 80, 0, 80, 10);
     
     // Draw text in black
     canvas_set_color(canvas, ColorBlack);
-    canvas_draw_str(canvas, SCREEN_WIDTH - 58, 8, debug_str);
+    canvas_draw_str(canvas, SCREEN_WIDTH - 78, 8, debug_str);
 }
 
 /**
