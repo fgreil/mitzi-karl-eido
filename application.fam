@@ -37,7 +37,7 @@ App(
     fap_icon_assets_symbol="karl-eido",
  
     # Available categories: Main, GPIO, Sub-GHz, RFID, NFC, Infrared, Misc, Games, Tools, Settings, USB
-    fap_category="Games",
+    fap_category="Media",
 
     # Version number
     fap_version=(0,1,0)
