@@ -12,14 +12,14 @@ App(
     apptype=FlipperAppType.EXTERNAL,
     
     # The C function that starts the app, i.a.w. the main C file must contain: int32_t puckgirl_main(void* p) { ... }
-    entry_point="karl_eido_main",
+    entry_point="karl_main",
 
     # Preprocessor definitions added during compilation
     cdefines=["APP_KARL_EIDO"],
 	
-    sources=["puck.c"],
+    sources=["karl-eido.c"],
 
-	 fap_author="F Greil",
+	fap_author="F Greil",
     fap_weburl="https://github.com/fgreil/mitzi-karl-eido",
 
     # List of system modules this app depends on
